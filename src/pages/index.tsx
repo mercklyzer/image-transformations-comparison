@@ -9,6 +9,7 @@ const PHOTOROOM_FOLDER = "v1773826372";
 
 type ReviewStatus = "accepted" | "rejected";
 type Reviews = Record<string, ReviewStatus>;
+type Filter = "all" | "accepted" | "rejected" | "undecided";
 
 function cloudUrl(folder: string, filename: string) {
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${folder}/${encodeURIComponent(filename)}`;
@@ -34,6 +35,7 @@ interface Props {
 
 export default function Home({ images }: Props) {
   const [page, setPage] = useState(0);
+  const [filter, setFilter] = useState<Filter>("all");
   const [modal, setModal] = useState<{ src: string; alt: string } | null>(null);
   const [reviews, setReviews] = useState<Reviews>({});
 
@@ -49,7 +51,6 @@ export default function Home({ images }: Props) {
     const current = reviews[pfn];
     const next = current === status ? null : status;
 
-    // Optimistic update
     setReviews((prev) => {
       const updated = { ...prev };
       if (next === null) delete updated[pfn];
@@ -64,8 +65,36 @@ export default function Home({ images }: Props) {
     });
   }
 
-  const totalPages = Math.ceil(images.length / PAGE_SIZE);
-  const pageImages = images.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  function handleFilter(f: Filter) {
+    setFilter(f);
+    setPage(0);
+  }
+
+  const stats = {
+    total: images.length,
+    accepted: images.filter((f) => reviews[photoroomFilename(f)] === "accepted")
+      .length,
+    rejected: images.filter((f) => reviews[photoroomFilename(f)] === "rejected")
+      .length,
+    undecided: images.filter((f) => !reviews[photoroomFilename(f)]).length,
+  };
+  const reviewedPct = Math.round(
+    ((stats.accepted + stats.rejected) / stats.total) * 100,
+  );
+
+  const filteredImages = images.filter((f) => {
+    const pfn = photoroomFilename(f);
+    if (filter === "accepted") return reviews[pfn] === "accepted";
+    if (filter === "rejected") return reviews[pfn] === "rejected";
+    if (filter === "undecided") return !reviews[pfn];
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredImages.length / PAGE_SIZE);
+  const pageImages = filteredImages.slice(
+    page * PAGE_SIZE,
+    (page + 1) * PAGE_SIZE,
+  );
 
   return (
     <>
@@ -81,6 +110,95 @@ export default function Home({ images }: Props) {
         </header>
 
         <main className="px-8 py-6 max-w-7xl mx-auto">
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-3 mb-5">
+            {(
+              [
+                {
+                  key: "all",
+                  label: "Total",
+                  count: stats.total,
+                  color: "violet",
+                },
+                {
+                  key: "accepted",
+                  label: "Accepted",
+                  count: stats.accepted,
+                  color: "emerald",
+                },
+                {
+                  key: "rejected",
+                  label: "Rejected",
+                  count: stats.rejected,
+                  color: "red",
+                },
+                {
+                  key: "undecided",
+                  label: "Undecided",
+                  count: stats.undecided,
+                  color: "slate",
+                },
+              ] as const
+            ).map(({ key, label, count, color }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleFilter(key)}
+                className={`text-left p-4 rounded-xl border transition-all ${
+                  filter === key
+                    ? color === "violet"
+                      ? "bg-violet-100 border-violet-400 shadow-sm"
+                      : color === "emerald"
+                        ? "bg-emerald-100 border-emerald-400 shadow-sm"
+                        : color === "red"
+                          ? "bg-red-100 border-red-400 shadow-sm"
+                          : "bg-slate-100 border-slate-400 shadow-sm"
+                    : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                }`}
+              >
+                <p
+                  className={`text-2xl font-bold ${
+                    filter === key
+                      ? color === "violet"
+                        ? "text-violet-700"
+                        : color === "emerald"
+                          ? "text-emerald-700"
+                          : color === "red"
+                            ? "text-red-700"
+                            : "text-slate-700"
+                      : "text-slate-800"
+                  }`}
+                >
+                  {count}
+                </p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
+                  {label}
+                </p>
+              </button>
+            ))}
+          </div>
+
+          {/* Progress bar */}
+          <div className="mb-5">
+            <div className="flex justify-between text-xs text-slate-500 mb-1.5">
+              <span>Review progress</span>
+              <span className="font-medium text-slate-700">
+                {stats.accepted + stats.rejected} / {stats.total} ({reviewedPct}
+                %)
+              </span>
+            </div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden flex">
+              <div
+                className="h-full bg-emerald-400 transition-all duration-500"
+                style={{ width: `${(stats.accepted / stats.total) * 100}%` }}
+              />
+              <div
+                className="h-full bg-red-400 transition-all duration-500"
+                style={{ width: `${(stats.rejected / stats.total) * 100}%` }}
+              />
+            </div>
+          </div>
+
           <div className="rounded-xl border border-violet-200 bg-violet-50 shadow-sm overflow-hidden">
             <table className="w-full border-collapse">
               <thead>
@@ -192,7 +310,8 @@ export default function Home({ images }: Props) {
               <span className="font-medium text-slate-700">{page + 1}</span> of{" "}
               <span className="font-medium text-slate-700">{totalPages}</span>
               <span className="text-slate-400 ml-1">
-                ({images.length} images)
+                ({filteredImages.length}
+                {filter !== "all" ? ` of ${images.length}` : ""} images)
               </span>
             </span>
             <div className="flex gap-2">
