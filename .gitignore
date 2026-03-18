@@ -41,4 +41,5 @@ yarn-error.log*
 next-env.d.ts
 
 source/*
+photoroom/*
 reviews.json

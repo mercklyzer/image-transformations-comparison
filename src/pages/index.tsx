@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 
 const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const PAGE_SIZE = 50;
-const SOURCE_FOLDER = "v1773826389";
-const PHOTOROOM_FOLDER = "v1773826372";
+const SOURCE_FOLDER = process.env.NEXT_PUBLIC_SOURCE_FOLDER ?? "";
+const PHOTOROOM_FOLDER = process.env.NEXT_PUBLIC_PHOTOROOM_FOLDER ?? "";
 
 type ReviewStatus = "accepted" | "rejected";
 type Reviews = Record<string, ReviewStatus>;
