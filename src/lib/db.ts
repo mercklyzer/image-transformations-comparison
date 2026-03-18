@@ -2,15 +2,18 @@ import { neon } from "@neondatabase/serverless";
 
 const sql = neon(process.env.DATABASE_URL!);
 
-export type ReviewStatus = "accepted" | "rejected";
+export type ReviewStatus = "accepted" | "rejected" | "ignore";
 export type Reviews = Record<string, ReviewStatus>;
 
 async function ensureTable(): Promise<void> {
   await sql`
     CREATE TABLE IF NOT EXISTS reviews (
       filename TEXT PRIMARY KEY,
-      status   TEXT NOT NULL CHECK (status IN ('accepted', 'rejected'))
+      status   TEXT NOT NULL
     )
+  `;
+  await sql`
+    ALTER TABLE reviews DROP CONSTRAINT IF EXISTS reviews_status_check
   `;
 }
 

@@ -11,8 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "POST") {
     const { status } = req.body as { status?: string };
-    if (status !== "accepted" && status !== "rejected") {
-      return res.status(400).json({ error: "status must be accepted or rejected" });
+    if (status !== "accepted" && status !== "rejected" && status !== "ignore") {
+      return res.status(400).json({ error: "status must be accepted, rejected, or ignore" });
     }
     await setStatus(filename, status);
     return res.status(200).json({ ok: true });

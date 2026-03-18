@@ -7,9 +7,9 @@ const PAGE_SIZE = 50;
 const SOURCE_FOLDER = process.env.NEXT_PUBLIC_SOURCE_FOLDER ?? "";
 const PHOTOROOM_FOLDER = process.env.NEXT_PUBLIC_PHOTOROOM_FOLDER ?? "";
 
-type ReviewStatus = "accepted" | "rejected";
+type ReviewStatus = "accepted" | "rejected" | "ignore";
 type Reviews = Record<string, ReviewStatus>;
-type Filter = "all" | "accepted" | "rejected" | "undecided";
+type Filter = "all" | "accepted" | "rejected" | "ignored" | "undecided";
 
 function cloudUrl(folder: string, filename: string) {
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${folder}/${encodeURIComponent(filename)}`;
@@ -76,16 +76,18 @@ export default function Home({ images }: Props) {
       .length,
     rejected: images.filter((f) => reviews[photoroomFilename(f)] === "rejected")
       .length,
+    ignored: images.filter((f) => reviews[photoroomFilename(f)] === "ignore").length,
     undecided: images.filter((f) => !reviews[photoroomFilename(f)]).length,
   };
   const reviewedPct = Math.round(
-    ((stats.accepted + stats.rejected) / stats.total) * 100,
+    ((stats.accepted + stats.rejected + stats.ignored) / stats.total) * 100,
   );
 
   const filteredImages = images.filter((f) => {
     const pfn = photoroomFilename(f);
     if (filter === "accepted") return reviews[pfn] === "accepted";
     if (filter === "rejected") return reviews[pfn] === "rejected";
+    if (filter === "ignored") return reviews[pfn] === "ignore";
     if (filter === "undecided") return !reviews[pfn];
     return true;
   });
@@ -111,7 +113,7 @@ export default function Home({ images }: Props) {
 
         <main className="px-8 py-6 max-w-7xl mx-auto">
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-3 mb-5">
+          <div className="grid grid-cols-5 gap-3 mb-5">
             {(
               [
                 {
@@ -133,6 +135,12 @@ export default function Home({ images }: Props) {
                   color: "red",
                 },
                 {
+                  key: "ignored",
+                  label: "Ignored",
+                  count: stats.ignored,
+                  color: "amber",
+                },
+                {
                   key: "undecided",
                   label: "Undecided",
                   count: stats.undecided,
@@ -152,7 +160,9 @@ export default function Home({ images }: Props) {
                         ? "bg-emerald-100 border-emerald-400 shadow-sm"
                         : color === "red"
                           ? "bg-red-100 border-red-400 shadow-sm"
-                          : "bg-slate-100 border-slate-400 shadow-sm"
+                          : color === "amber"
+                            ? "bg-amber-100 border-amber-400 shadow-sm"
+                            : "bg-slate-100 border-slate-400 shadow-sm"
                     : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
                 }`}
               >
@@ -165,7 +175,9 @@ export default function Home({ images }: Props) {
                           ? "text-emerald-700"
                           : color === "red"
                             ? "text-red-700"
-                            : "text-slate-700"
+                            : color === "amber"
+                              ? "text-amber-700"
+                              : "text-slate-700"
                       : "text-slate-800"
                   }`}
                 >
@@ -183,7 +195,7 @@ export default function Home({ images }: Props) {
             <div className="flex justify-between text-xs text-slate-500 mb-1.5">
               <span>Review progress</span>
               <span className="font-medium text-slate-700">
-                {stats.accepted + stats.rejected} / {stats.total} ({reviewedPct}
+                {stats.accepted + stats.rejected + stats.ignored} / {stats.total} ({reviewedPct}
                 %)
               </span>
             </div>
@@ -195,6 +207,10 @@ export default function Home({ images }: Props) {
               <div
                 className="h-full bg-red-400 transition-all duration-500"
                 style={{ width: `${(stats.rejected / stats.total) * 100}%` }}
+              />
+              <div
+                className="h-full bg-amber-400 transition-all duration-500"
+                style={{ width: `${(stats.ignored / stats.total) * 100}%` }}
               />
             </div>
           </div>
@@ -223,7 +239,9 @@ export default function Home({ images }: Props) {
                           ? "bg-emerald-50 hover:bg-emerald-100/70"
                           : status === "rejected"
                             ? "bg-red-50 hover:bg-red-100/70"
-                            : "hover:bg-violet-200/60"
+                            : status === "ignore"
+                              ? "bg-amber-50 hover:bg-amber-100/70"
+                              : "hover:bg-violet-200/60"
                       }`}
                     >
                       <td className="px-5 py-4">
@@ -293,6 +311,17 @@ export default function Home({ images }: Props) {
                             }`}
                           >
                             <span>✕</span> Reject
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReview(pfn, "ignore")}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                              status === "ignore"
+                                ? "bg-amber-500 text-white shadow-sm"
+                                : "border border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50"
+                            }`}
+                          >
+                            <span>—</span> Ignore
                           </button>
                         </div>
                       </td>
