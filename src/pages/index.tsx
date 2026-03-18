@@ -1,11 +1,14 @@
 import type { GetStaticProps } from "next";
 import Head from "next/head";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const PAGE_SIZE = 50;
 const SOURCE_FOLDER = "v1773826389";
 const PHOTOROOM_FOLDER = "v1773826372";
+
+type ReviewStatus = "accepted" | "rejected";
+type Reviews = Record<string, ReviewStatus>;
 
 function cloudUrl(folder: string, filename: string) {
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${folder}/${encodeURIComponent(filename)}`;
@@ -21,6 +24,10 @@ function photoroomUrl(filename: string) {
   return cloudUrl(PHOTOROOM_FOLDER, `${base}.png`);
 }
 
+function photoroomFilename(filename: string) {
+  return `${filename.replace(/\.[^.]+$/, "")}.png`;
+}
+
 interface Props {
   images: string[];
 }
@@ -28,11 +35,37 @@ interface Props {
 export default function Home({ images }: Props) {
   const [page, setPage] = useState(0);
   const [modal, setModal] = useState<{ src: string; alt: string } | null>(null);
+  const [reviews, setReviews] = useState<Reviews>({});
+
+  const closeModal = () => setModal(null);
+
+  useEffect(() => {
+    fetch("/api/reviews")
+      .then((r) => r.json())
+      .then((data: Reviews) => setReviews(data));
+  }, []);
+
+  async function handleReview(pfn: string, status: ReviewStatus) {
+    const current = reviews[pfn];
+    const next = current === status ? null : status;
+
+    // Optimistic update
+    setReviews((prev) => {
+      const updated = { ...prev };
+      if (next === null) delete updated[pfn];
+      else updated[pfn] = next;
+      return updated;
+    });
+
+    await fetch(`/api/reviews/${encodeURIComponent(pfn)}`, {
+      method: next === null ? "DELETE" : "POST",
+      headers: next ? { "Content-Type": "application/json" } : {},
+      body: next ? JSON.stringify({ status: next }) : undefined,
+    });
+  }
 
   const totalPages = Math.ceil(images.length / PAGE_SIZE);
   const pageImages = images.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-  const closeModal = () => setModal(null);
 
   return (
     <>
@@ -61,57 +94,93 @@ export default function Home({ images }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-violet-100">
-                {pageImages.map((filename) => (
-                  <tr
-                    key={filename}
-                    className="transition-colors duration-150 hover:bg-violet-200/60"
-                  >
-                    <td className="px-5 py-4">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setModal({
-                            src: sourceUrl(filename),
-                            alt: `Source: ${filename}`,
-                          })
-                        }
-                        className="group text-left w-full"
-                      >
-                        {/* biome-ignore lint/performance/noImgElement: Cloudinary CDN handles optimization */}
-                        <img
-                          src={sourceUrl(filename)}
-                          alt={`Source: ${filename}`}
-                          className="max-h-48 object-contain rounded-md transition-transform duration-150 group-hover:scale-[1.02] cursor-pointer"
-                        />
-                        <p className="text-xs text-slate-400 mt-2 truncate font-mono">
-                          {filename}
-                        </p>
-                      </button>
-                    </td>
-                    <td className="px-5 py-4">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setModal({
-                            src: photoroomUrl(filename),
-                            alt: `Photoroom: ${filename}`,
-                          })
-                        }
-                        className="group text-left w-full"
-                      >
-                        {/* biome-ignore lint/performance/noImgElement: Cloudinary CDN handles optimization */}
-                        <img
-                          src={photoroomUrl(filename)}
-                          alt={`Photoroom: ${filename.replace(/\.[^.]+$/, "")}.png`}
-                          className="max-h-48 object-contain rounded-md transition-transform duration-150 group-hover:scale-[1.02] cursor-pointer"
-                        />
-                        <p className="text-xs text-slate-400 mt-2 truncate font-mono">
-                          {`${filename.replace(/\.[^.]+$/, "")}.png`}
-                        </p>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {pageImages.map((filename) => {
+                  const pfn = photoroomFilename(filename);
+                  const status = reviews[pfn];
+                  return (
+                    <tr
+                      key={filename}
+                      className={`transition-colors duration-150 ${
+                        status === "accepted"
+                          ? "bg-emerald-50 hover:bg-emerald-100/70"
+                          : status === "rejected"
+                            ? "bg-red-50 hover:bg-red-100/70"
+                            : "hover:bg-violet-200/60"
+                      }`}
+                    >
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setModal({
+                              src: sourceUrl(filename),
+                              alt: `Source: ${filename}`,
+                            })
+                          }
+                          className="group text-left w-full"
+                        >
+                          {/* biome-ignore lint/performance/noImgElement: Cloudinary CDN handles optimization */}
+                          <img
+                            src={sourceUrl(filename)}
+                            alt={`Source: ${filename}`}
+                            className="max-h-48 object-contain rounded-md transition-transform duration-150 group-hover:scale-[1.02] cursor-pointer"
+                          />
+                          <p className="text-xs text-slate-400 mt-2 truncate font-mono">
+                            {filename}
+                          </p>
+                        </button>
+                      </td>
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setModal({
+                              src: photoroomUrl(filename),
+                              alt: `Photoroom: ${pfn}`,
+                            })
+                          }
+                          className="group text-left w-full"
+                        >
+                          {/* biome-ignore lint/performance/noImgElement: Cloudinary CDN handles optimization */}
+                          <img
+                            src={photoroomUrl(filename)}
+                            alt={`Photoroom: ${pfn}`}
+                            className="max-h-48 object-contain rounded-md transition-transform duration-150 group-hover:scale-[1.02] cursor-pointer"
+                          />
+                          <p className="text-xs text-slate-400 mt-2 truncate font-mono">
+                            {pfn}
+                          </p>
+                        </button>
+
+                        {/* Review buttons */}
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            type="button"
+                            onClick={() => handleReview(pfn, "accepted")}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                              status === "accepted"
+                                ? "bg-emerald-500 text-white shadow-sm"
+                                : "border border-slate-200 text-slate-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50"
+                            }`}
+                          >
+                            <span>✓</span> Accept
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReview(pfn, "rejected")}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                              status === "rejected"
+                                ? "bg-red-500 text-white shadow-sm"
+                                : "border border-slate-200 text-slate-500 hover:border-red-400 hover:text-red-600 hover:bg-red-50"
+                            }`}
+                          >
+                            <span>✕</span> Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -163,7 +232,7 @@ export default function Home({ images }: Props) {
             className="absolute inset-0 w-full h-full cursor-default"
             onClick={closeModal}
           />
-          <div className="relative  rounded-2xl shadow-2xl p-4 max-w-4xl max-h-full z-10">
+          <div className="relative rounded-2xl shadow-2xl p-4 max-w-4xl max-h-full z-10">
             <button
               type="button"
               onClick={closeModal}
