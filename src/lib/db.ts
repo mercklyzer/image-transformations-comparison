@@ -1,34 +1,34 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import path from "node:path";
+import { neon } from "@neondatabase/serverless";
 
-const DB_PATH = path.join(process.cwd(), "reviews.json");
+const sql = neon(process.env.DATABASE_URL!);
 
 export type ReviewStatus = "accepted" | "rejected";
 export type Reviews = Record<string, ReviewStatus>;
 
-export function getAll(): Reviews {
-  if (!existsSync(DB_PATH)) return {};
-  try {
-    return JSON.parse(readFileSync(DB_PATH, "utf-8")) as Reviews;
-  } catch {
-    return {};
-  }
+async function ensureTable(): Promise<void> {
+  await sql`
+    CREATE TABLE IF NOT EXISTS reviews (
+      filename TEXT PRIMARY KEY,
+      status   TEXT NOT NULL CHECK (status IN ('accepted', 'rejected'))
+    )
+  `;
 }
 
-export function setStatus(filename: string, status: ReviewStatus): void {
-  const data = getAll();
-  data[filename] = status;
-  atomicWrite(data);
+export async function getAll(): Promise<Reviews> {
+  await ensureTable();
+  const rows = await sql`SELECT filename, status FROM reviews`;
+  return Object.fromEntries(rows.map((r) => [r.filename, r.status as ReviewStatus]));
 }
 
-export function clearStatus(filename: string): void {
-  const data = getAll();
-  delete data[filename];
-  atomicWrite(data);
+export async function setStatus(filename: string, status: ReviewStatus): Promise<void> {
+  await ensureTable();
+  await sql`
+    INSERT INTO reviews (filename, status) VALUES (${filename}, ${status})
+    ON CONFLICT (filename) DO UPDATE SET status = EXCLUDED.status
+  `;
 }
 
-function atomicWrite(data: Reviews): void {
-  const tmp = `${DB_PATH}.tmp`;
-  writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
-  renameSync(tmp, DB_PATH);
+export async function clearStatus(filename: string): Promise<void> {
+  await ensureTable();
+  await sql`DELETE FROM reviews WHERE filename = ${filename}`;
 }
