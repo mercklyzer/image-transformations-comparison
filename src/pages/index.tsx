@@ -10,9 +10,9 @@ type Filter = "all" | "accepted" | "rejected" | "ignored" | "undecided";
 
 interface ImageData {
   base: string;
-  source: string;
+  source: string | null;
   photoroom: string | null;
-  birefnet: string | null;
+  "birefnet-general-lite": string | null;
 }
 
 interface Props {
@@ -298,7 +298,7 @@ export default function Home({ images }: Props) {
                         <button
                           type="button"
                           onClick={() =>
-                            setModal({
+                            img.source && setModal({
                               src: img.source,
                               alt: `Source: ${img.base}`,
                             })
@@ -306,11 +306,13 @@ export default function Home({ images }: Props) {
                           className="group text-left w-full"
                         >
                           {/* biome-ignore lint/performance/noImgElement: Cloudinary CDN handles optimization */}
-                          <img
-                            src={img.source}
-                            alt={`Source: ${img.base}`}
-                            className="max-h-48 object-contain rounded-md transition-transform duration-150 group-hover:scale-[1.02] cursor-pointer"
-                          />
+                          {img.source && (
+                            <img
+                              src={img.source}
+                              alt={`Source: ${img.base}`}
+                              className="max-h-48 object-contain rounded-md transition-transform duration-150 group-hover:scale-[1.02] cursor-pointer"
+                            />
+                          )}
                           <p className="text-xs text-slate-400 mt-2 truncate font-mono">
                             {img.base}
                           </p>
@@ -328,17 +330,17 @@ export default function Home({ images }: Props) {
                         <button
                           type="button"
                           onClick={() =>
-                            img.birefnet && setModal({
-                              src: img.birefnet,
+                            img["birefnet-general-lite"] && setModal({
+                              src: img["birefnet-general-lite"],
                               alt: `Birefnet General Lite: ${img.base}`,
                             })
                           }
                           className="group text-left w-full"
                         >
-                          {img.birefnet && (
+                          {img["birefnet-general-lite"] && (
                             // biome-ignore lint/performance/noImgElement: Cloudinary CDN handles optimization
                             <img
-                              src={img.birefnet}
+                              src={img["birefnet-general-lite"]}
                               alt={`Birefnet General Lite: ${img.base}`}
                               className="max-h-48 object-contain rounded-md transition-transform duration-150 group-hover:scale-[1.02] cursor-pointer"
                             />
@@ -531,5 +533,5 @@ export default function Home({ images }: Props) {
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
   const { default: images } = await import("@/data/images.json");
-  return { props: { images } };
+  return { props: { images: images as ImageData[] } };
 };
