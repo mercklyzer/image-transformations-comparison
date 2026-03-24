@@ -10,8 +10,11 @@ interface ImageData {
   source: string | null;
 }
 
+type Dataset = "babywear" | "footwear";
+
 interface Props {
-  images: ImageData[];
+  babywearImages: ImageData[];
+  footwearImages: ImageData[];
 }
 
 interface DominantColors {
@@ -163,7 +166,11 @@ function DominantStrip({
   );
 }
 
-export default function ColorPalettePage({ images }: Props) {
+export default function ColorPalettePage({
+  babywearImages,
+  footwearImages,
+}: Props) {
+  const [dataset, setDataset] = useState<Dataset>("babywear");
   const [page, setPage] = useState(0);
   const [palettes, setPalettes] = useState<Record<string, PaletteState>>({});
   const [vibrantPalettes, setVibrantPalettes] = useState<
@@ -175,10 +182,19 @@ export default function ColorPalettePage({ images }: Props) {
     base: string;
   } | null>(null);
 
+  const images = dataset === "babywear" ? babywearImages : footwearImages;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset state on dataset switch
+  useEffect(() => {
+    setPage(0);
+    setPalettes({});
+    setVibrantPalettes({});
+  }, [dataset]);
+
   const totalPages = Math.ceil(images.length / PAGE_SIZE);
   const pageImages = images.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: page is the fetch trigger; palettes checked inside
+  // biome-ignore lint/correctness/useExhaustiveDependencies: page/dataset are the fetch triggers; palettes checked inside
   useEffect(() => {
     for (const img of pageImages) {
       if (!img.source || palettes[img.base]) continue;
@@ -191,9 +207,9 @@ export default function ColorPalettePage({ images }: Props) {
         .then((data) => setPalettes((prev) => ({ ...prev, [img.base]: data })))
         .catch(() => setPalettes((prev) => ({ ...prev, [img.base]: "error" })));
     }
-  }, [page]);
+  }, [page, dataset]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: page is the fetch trigger; palettes checked inside
+  // biome-ignore lint/correctness/useExhaustiveDependencies: page/dataset are the fetch triggers; palettes checked inside
   useEffect(() => {
     for (const img of pageImages) {
       if (!img.source || vibrantPalettes[img.base]) continue;
@@ -210,7 +226,7 @@ export default function ColorPalettePage({ images }: Props) {
           setVibrantPalettes((prev) => ({ ...prev, [img.base]: "error" })),
         );
     }
-  }, [page]);
+  }, [page, dataset]);
 
   return (
     <>
@@ -221,9 +237,28 @@ export default function ColorPalettePage({ images }: Props) {
       <div className="min-h-screen bg-slate-50">
         <header className="bg-white border-b border-slate-200 px-8 py-5 sticky top-0 z-10">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <h1 className="text-xl font-semibold text-slate-800 tracking-tight">
-              Color Palette
-            </h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-semibold text-slate-800 tracking-tight">
+                Color Palette
+              </h1>
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="dataset-select"
+                  className="text-xs font-medium text-slate-500"
+                >
+                  Source data
+                </label>
+                <select
+                  id="dataset-select"
+                  value={dataset}
+                  onChange={(e) => setDataset(e.target.value as Dataset)}
+                  className="text-sm rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                >
+                  <option value="babywear">Babywear</option>
+                  <option value="footwear">Footwear</option>
+                </select>
+              </div>
+            </div>
             <nav className="flex gap-4 text-sm font-medium">
               <Link
                 href="/"
@@ -475,11 +510,17 @@ export default function ColorPalettePage({ images }: Props) {
 }
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-  const { default: images } = await import("@/data/images.json");
+  const { default: babywear } = await import("@/data/images.json");
+  const { default: footwear } = await import("@/data/images-footwear.json");
+  const toImageData = (arr: { base: string; source?: string | null }[]) =>
+    arr.map(({ base, source }) => ({ base, source: source ?? null }));
   return {
     props: {
-      images: (images as { base: string; source?: string | null }[]).map(
-        ({ base, source }) => ({ base, source: source ?? null }),
+      babywearImages: toImageData(
+        babywear as { base: string; source?: string | null }[],
+      ),
+      footwearImages: toImageData(
+        footwear as { base: string; source?: string | null }[],
       ),
     },
   };
