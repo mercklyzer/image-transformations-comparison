@@ -33,10 +33,15 @@ async function ensureTable(): Promise<void> {
 export async function getAll(): Promise<Reviews> {
   await ensureTable();
   const rows = await sql`SELECT filename, tool, status FROM reviews`;
-  return Object.fromEntries(rows.map((r) => [`${r.tool}:${r.filename}`, r.status as ReviewStatus]));
+  return Object.fromEntries(
+    rows.map((r) => [`${r.tool}:${r.filename}`, r.status as ReviewStatus]),
+  );
 }
 
-export async function setStatus(key: string, status: ReviewStatus): Promise<void> {
+export async function setStatus(
+  key: string,
+  status: ReviewStatus,
+): Promise<void> {
   await ensureTable();
   const colonIdx = key.indexOf(":");
   const tool = key.slice(0, colonIdx);

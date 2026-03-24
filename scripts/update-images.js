@@ -82,7 +82,7 @@ for (const row of rows) {
   if (slashIdx === -1) continue;
 
   const folder = publicId.slice(0, slashIdx); // e.g. "source", "photoroom", "birefnet-general-lite"
-  const base = publicId.slice(slashIdx + 1);  // filename without extension
+  const base = publicId.slice(slashIdx + 1); // filename without extension
 
   foldersFound.add(folder);
 

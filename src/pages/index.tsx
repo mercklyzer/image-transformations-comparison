@@ -1,5 +1,6 @@
 import type { GetStaticProps } from "next";
 import Head from "next/head";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const PAGE_SIZE = 50;
@@ -72,24 +73,41 @@ export default function Home({ images }: Props) {
 
   const photoroomStats = {
     total: images.length,
-    accepted: images.filter((img) => reviews[photoroomKey(img.base)] === "accepted").length,
-    rejected: images.filter((img) => reviews[photoroomKey(img.base)] === "rejected").length,
-    ignored: images.filter((img) => reviews[photoroomKey(img.base)] === "ignore").length,
+    accepted: images.filter(
+      (img) => reviews[photoroomKey(img.base)] === "accepted",
+    ).length,
+    rejected: images.filter(
+      (img) => reviews[photoroomKey(img.base)] === "rejected",
+    ).length,
+    ignored: images.filter(
+      (img) => reviews[photoroomKey(img.base)] === "ignore",
+    ).length,
     undecided: images.filter((img) => !reviews[photoroomKey(img.base)]).length,
   };
   const photoroomReviewedPct = Math.round(
-    ((photoroomStats.accepted + photoroomStats.rejected + photoroomStats.ignored) / photoroomStats.total) * 100,
+    ((photoroomStats.accepted +
+      photoroomStats.rejected +
+      photoroomStats.ignored) /
+      photoroomStats.total) *
+      100,
   );
 
   const birefnetStats = {
     total: images.length,
-    accepted: images.filter((img) => reviews[birefnetKey(img.base)] === "accepted").length,
-    rejected: images.filter((img) => reviews[birefnetKey(img.base)] === "rejected").length,
-    ignored: images.filter((img) => reviews[birefnetKey(img.base)] === "ignore").length,
+    accepted: images.filter(
+      (img) => reviews[birefnetKey(img.base)] === "accepted",
+    ).length,
+    rejected: images.filter(
+      (img) => reviews[birefnetKey(img.base)] === "rejected",
+    ).length,
+    ignored: images.filter((img) => reviews[birefnetKey(img.base)] === "ignore")
+      .length,
     undecided: images.filter((img) => !reviews[birefnetKey(img.base)]).length,
   };
   const birefnetReviewedPct = Math.round(
-    ((birefnetStats.accepted + birefnetStats.rejected + birefnetStats.ignored) / birefnetStats.total) * 100,
+    ((birefnetStats.accepted + birefnetStats.rejected + birefnetStats.ignored) /
+      birefnetStats.total) *
+      100,
   );
 
   const filteredImages = images.filter((img) => {
@@ -124,23 +142,66 @@ export default function Home({ images }: Props) {
 
       <div className="min-h-screen bg-slate-50">
         <header className="bg-white border-b border-slate-200 px-8 py-5 sticky top-0 z-10">
-          <h1 className="text-xl font-semibold text-slate-800 tracking-tight">
-            Image Transformation Comparison
-          </h1>
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <h1 className="text-xl font-semibold text-slate-800 tracking-tight">
+              Image Transformation Comparison
+            </h1>
+            <nav className="flex gap-4 text-sm font-medium">
+              <Link
+                href="/"
+                className="text-violet-600 border-b border-violet-400 pb-0.5"
+              >
+                Image Comparison
+              </Link>
+              <Link
+                href="/color-palette"
+                className="text-slate-500 hover:text-slate-800 transition-colors"
+              >
+                Color Palette
+              </Link>
+            </nav>
+          </div>
         </header>
 
         <main className="px-8 py-6 max-w-7xl mx-auto">
           {/* Birefnet General Lite Stats */}
           <div className="mb-3">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Birefnet General Lite</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              Birefnet General Lite
+            </p>
             <div className="grid grid-cols-5 gap-3">
               {(
                 [
-                  { key: "all", label: "Total", count: birefnetStats.total, color: "violet" },
-                  { key: "accepted", label: "Accepted", count: birefnetStats.accepted, color: "emerald" },
-                  { key: "rejected", label: "Rejected", count: birefnetStats.rejected, color: "red" },
-                  { key: "ignored", label: "Ignored", count: birefnetStats.ignored, color: "amber" },
-                  { key: "undecided", label: "Undecided", count: birefnetStats.undecided, color: "slate" },
+                  {
+                    key: "all",
+                    label: "Total",
+                    count: birefnetStats.total,
+                    color: "violet",
+                  },
+                  {
+                    key: "accepted",
+                    label: "Accepted",
+                    count: birefnetStats.accepted,
+                    color: "emerald",
+                  },
+                  {
+                    key: "rejected",
+                    label: "Rejected",
+                    count: birefnetStats.rejected,
+                    color: "red",
+                  },
+                  {
+                    key: "ignored",
+                    label: "Ignored",
+                    count: birefnetStats.ignored,
+                    color: "amber",
+                  },
+                  {
+                    key: "undecided",
+                    label: "Undecided",
+                    count: birefnetStats.undecided,
+                    color: "slate",
+                  },
                 ] as const
               ).map(({ key, label, count, color }) => (
                 <button
@@ -188,28 +249,73 @@ export default function Home({ images }: Props) {
               <div className="flex justify-between text-xs text-slate-500 mb-1.5">
                 <span>Review progress</span>
                 <span className="font-medium text-slate-700">
-                  {birefnetStats.accepted + birefnetStats.rejected + birefnetStats.ignored} / {birefnetStats.total} ({birefnetReviewedPct}%)
+                  {birefnetStats.accepted +
+                    birefnetStats.rejected +
+                    birefnetStats.ignored}{" "}
+                  / {birefnetStats.total} ({birefnetReviewedPct}%)
                 </span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden flex">
-                <div className="h-full bg-emerald-400 transition-all duration-500" style={{ width: `${(birefnetStats.accepted / birefnetStats.total) * 100}%` }} />
-                <div className="h-full bg-red-400 transition-all duration-500" style={{ width: `${(birefnetStats.rejected / birefnetStats.total) * 100}%` }} />
-                <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${(birefnetStats.ignored / birefnetStats.total) * 100}%` }} />
+                <div
+                  className="h-full bg-emerald-400 transition-all duration-500"
+                  style={{
+                    width: `${(birefnetStats.accepted / birefnetStats.total) * 100}%`,
+                  }}
+                />
+                <div
+                  className="h-full bg-red-400 transition-all duration-500"
+                  style={{
+                    width: `${(birefnetStats.rejected / birefnetStats.total) * 100}%`,
+                  }}
+                />
+                <div
+                  className="h-full bg-amber-400 transition-all duration-500"
+                  style={{
+                    width: `${(birefnetStats.ignored / birefnetStats.total) * 100}%`,
+                  }}
+                />
               </div>
             </div>
           </div>
 
           {/* Photoroom Stats */}
           <div className="mb-5">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Photoroom</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              Photoroom
+            </p>
             <div className="grid grid-cols-5 gap-3">
               {(
                 [
-                  { key: "all", label: "Total", count: photoroomStats.total, color: "violet" },
-                  { key: "accepted", label: "Accepted", count: photoroomStats.accepted, color: "emerald" },
-                  { key: "rejected", label: "Rejected", count: photoroomStats.rejected, color: "red" },
-                  { key: "ignored", label: "Ignored", count: photoroomStats.ignored, color: "amber" },
-                  { key: "undecided", label: "Undecided", count: photoroomStats.undecided, color: "slate" },
+                  {
+                    key: "all",
+                    label: "Total",
+                    count: photoroomStats.total,
+                    color: "violet",
+                  },
+                  {
+                    key: "accepted",
+                    label: "Accepted",
+                    count: photoroomStats.accepted,
+                    color: "emerald",
+                  },
+                  {
+                    key: "rejected",
+                    label: "Rejected",
+                    count: photoroomStats.rejected,
+                    color: "red",
+                  },
+                  {
+                    key: "ignored",
+                    label: "Ignored",
+                    count: photoroomStats.ignored,
+                    color: "amber",
+                  },
+                  {
+                    key: "undecided",
+                    label: "Undecided",
+                    count: photoroomStats.undecided,
+                    color: "slate",
+                  },
                 ] as const
               ).map(({ key, label, count, color }) => (
                 <button
@@ -257,13 +363,31 @@ export default function Home({ images }: Props) {
               <div className="flex justify-between text-xs text-slate-500 mb-1.5">
                 <span>Review progress</span>
                 <span className="font-medium text-slate-700">
-                  {photoroomStats.accepted + photoroomStats.rejected + photoroomStats.ignored} / {photoroomStats.total} ({photoroomReviewedPct}%)
+                  {photoroomStats.accepted +
+                    photoroomStats.rejected +
+                    photoroomStats.ignored}{" "}
+                  / {photoroomStats.total} ({photoroomReviewedPct}%)
                 </span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden flex">
-                <div className="h-full bg-emerald-400 transition-all duration-500" style={{ width: `${(photoroomStats.accepted / photoroomStats.total) * 100}%` }} />
-                <div className="h-full bg-red-400 transition-all duration-500" style={{ width: `${(photoroomStats.rejected / photoroomStats.total) * 100}%` }} />
-                <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${(photoroomStats.ignored / photoroomStats.total) * 100}%` }} />
+                <div
+                  className="h-full bg-emerald-400 transition-all duration-500"
+                  style={{
+                    width: `${(photoroomStats.accepted / photoroomStats.total) * 100}%`,
+                  }}
+                />
+                <div
+                  className="h-full bg-red-400 transition-all duration-500"
+                  style={{
+                    width: `${(photoroomStats.rejected / photoroomStats.total) * 100}%`,
+                  }}
+                />
+                <div
+                  className="h-full bg-amber-400 transition-all duration-500"
+                  style={{
+                    width: `${(photoroomStats.ignored / photoroomStats.total) * 100}%`,
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -298,15 +422,16 @@ export default function Home({ images }: Props) {
                         <button
                           type="button"
                           onClick={() =>
-                            img.source && setModal({
+                            img.source &&
+                            setModal({
                               src: img.source,
                               alt: `Source: ${img.base}`,
                             })
                           }
                           className="group text-left w-full"
                         >
-                          {/* biome-ignore lint/performance/noImgElement: Cloudinary CDN handles optimization */}
                           {img.source && (
+                            // biome-ignore lint/performance/noImgElement: Cloudinary CDN handles optimization
                             <img
                               src={img.source}
                               alt={`Source: ${img.base}`}
@@ -318,19 +443,22 @@ export default function Home({ images }: Props) {
                           </p>
                         </button>
                       </td>
-                      <td className={`px-5 py-4 ${
-                        birefnetStatus === "accepted"
-                          ? "bg-emerald-50"
-                          : birefnetStatus === "rejected"
-                            ? "bg-red-50"
-                            : birefnetStatus === "ignore"
-                              ? "bg-amber-50"
-                              : ""
-                      }`}>
+                      <td
+                        className={`px-5 py-4 ${
+                          birefnetStatus === "accepted"
+                            ? "bg-emerald-50"
+                            : birefnetStatus === "rejected"
+                              ? "bg-red-50"
+                              : birefnetStatus === "ignore"
+                                ? "bg-amber-50"
+                                : ""
+                        }`}
+                      >
                         <button
                           type="button"
                           onClick={() =>
-                            img["birefnet-general-lite"] && setModal({
+                            img["birefnet-general-lite"] &&
+                            setModal({
                               src: img["birefnet-general-lite"],
                               alt: `Birefnet General Lite: ${img.base}`,
                             })
@@ -385,19 +513,22 @@ export default function Home({ images }: Props) {
                           </button>
                         </div>
                       </td>
-                      <td className={`px-5 py-4 ${
-                        photoroomStatus === "accepted"
-                          ? "bg-emerald-50"
-                          : photoroomStatus === "rejected"
-                            ? "bg-red-50"
-                            : photoroomStatus === "ignore"
-                              ? "bg-amber-50"
-                              : ""
-                      }`}>
+                      <td
+                        className={`px-5 py-4 ${
+                          photoroomStatus === "accepted"
+                            ? "bg-emerald-50"
+                            : photoroomStatus === "rejected"
+                              ? "bg-red-50"
+                              : photoroomStatus === "ignore"
+                                ? "bg-amber-50"
+                                : ""
+                        }`}
+                      >
                         <button
                           type="button"
                           onClick={() =>
-                            img.photoroom && setModal({
+                            img.photoroom &&
+                            setModal({
                               src: img.photoroom,
                               alt: `Photoroom: ${img.base}`,
                             })
@@ -467,7 +598,10 @@ export default function Home({ images }: Props) {
               <span className="font-medium text-slate-700">{totalPages}</span>
               <span className="text-slate-400 ml-1">
                 ({filteredImages.length}
-                {photoroomFilter !== "all" || birefnetFilter !== "all" ? ` of ${images.length}` : ""} images)
+                {photoroomFilter !== "all" || birefnetFilter !== "all"
+                  ? ` of ${images.length}`
+                  : ""}{" "}
+                images)
               </span>
             </span>
             <div className="flex gap-2">
