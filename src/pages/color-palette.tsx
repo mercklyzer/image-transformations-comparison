@@ -43,6 +43,11 @@ interface VibrantPaletteData {
 }
 type VibrantState = VibrantPaletteData | "loading" | "error";
 
+interface BedrockPaletteData {
+  hex: string;
+}
+type BedrockState = BedrockPaletteData | "loading" | "error";
+
 const DOMINANT_ORDER: { key: keyof DominantColors; label: string }[] = [
   { key: "vibrant", label: "Vibrant" },
   { key: "vibrant_dark", label: "Dark Vibrant" },
@@ -52,7 +57,8 @@ const DOMINANT_ORDER: { key: keyof DominantColors; label: string }[] = [
   { key: "muted_light", label: "Light Muted" },
 ];
 
-function isLight(hex: string): boolean {
+function isLight(hex: string | null | undefined): boolean {
+  if (!hex || hex.length < 7) return false;
   const r = Number.parseInt(hex.slice(1, 3), 16);
   const g = Number.parseInt(hex.slice(3, 5), 16);
   const b = Number.parseInt(hex.slice(5, 7), 16);
@@ -176,6 +182,9 @@ export default function ColorPalettePage({
   const [vibrantPalettes, setVibrantPalettes] = useState<
     Record<string, VibrantState>
   >({});
+  const [bedrockPalettes, setBedrockPalettes] = useState<
+    Record<string, BedrockState>
+  >({});
   const [modal, setModal] = useState<{
     src: string;
     alt: string;
@@ -189,6 +198,7 @@ export default function ColorPalettePage({
     setPage(0);
     setPalettes({});
     setVibrantPalettes({});
+    setBedrockPalettes({});
   }, [dataset]);
 
   const totalPages = Math.ceil(images.length / PAGE_SIZE);
@@ -226,6 +236,49 @@ export default function ColorPalettePage({
           setVibrantPalettes((prev) => ({ ...prev, [img.base]: "error" })),
         );
     }
+  }, [page, dataset]);
+
+  // Nova Lite in ap-southeast-2 is capped at 400 RPM — limit to 5 concurrent requests
+  // biome-ignore lint/correctness/useExhaustiveDependencies: page/dataset are the fetch triggers; palettes checked inside
+  useEffect(() => {
+    const queue = pageImages.filter(
+      (img) => img.source && !bedrockPalettes[img.base],
+    );
+    if (queue.length === 0) return;
+
+    setBedrockPalettes((prev) => {
+      const next = { ...prev };
+      for (const img of queue) next[img.base] = "loading";
+      return next;
+    });
+
+    const CONCURRENCY = 5;
+    let active = 0;
+    let idx = 0;
+
+    function pump() {
+      while (active < CONCURRENCY && idx < queue.length) {
+        const img = queue[idx++];
+        if (!img.source) continue;
+        active++;
+        fetch(`/api/palette-bedrock?url=${encodeURIComponent(img.source)}`)
+          .then((r) => {
+            if (!r.ok) throw new Error("failed");
+            return r.json() as Promise<BedrockPaletteData>;
+          })
+          .then((data) =>
+            setBedrockPalettes((prev) => ({ ...prev, [img.base]: data })),
+          )
+          .catch(() =>
+            setBedrockPalettes((prev) => ({ ...prev, [img.base]: "error" })),
+          )
+          .finally(() => {
+            active--;
+            pump();
+          });
+      }
+    }
+    pump();
   }, [page, dataset]);
 
   return (
@@ -281,14 +334,17 @@ export default function ColorPalettePage({
             <table className="w-full border-collapse table-fixed">
               <thead>
                 <tr className="bg-violet-100 border-b border-violet-200">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-violet-500 uppercase tracking-wider w-1/3">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-violet-500 uppercase tracking-wider w-1/4">
                     Source
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-violet-500 uppercase tracking-wider w-1/3">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-violet-500 uppercase tracking-wider w-1/4">
                     imgix Palette
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-violet-500 uppercase tracking-wider w-1/3">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-violet-500 uppercase tracking-wider w-1/4">
                     Node Vibrant
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-violet-500 uppercase tracking-wider w-1/4">
+                    AWS Nova Lite
                   </th>
                 </tr>
               </thead>
@@ -369,6 +425,44 @@ export default function ColorPalettePage({
                             <DominantStrip
                               dominant_colors={vState.dominant_colors}
                             />
+                          );
+                        })()}
+                      </td>
+                      <td className="px-5 py-4 align-top">
+                        {(() => {
+                          const bState = bedrockPalettes[img.base];
+                          if (!bState || bState === "loading") {
+                            return (
+                              <div className="w-20 h-12 rounded-lg bg-slate-200 animate-pulse" />
+                            );
+                          }
+                          if (bState === "error") {
+                            return (
+                              <span className="text-xs text-red-400">
+                                Failed to load
+                              </span>
+                            );
+                          }
+                          if (!bState.hex) {
+                            return (
+                              <span className="text-xs text-red-400">
+                                No color returned
+                              </span>
+                            );
+                          }
+                          const light = isLight(bState.hex);
+                          return (
+                            <div
+                              className="rounded-lg flex flex-col items-center justify-center px-4 py-3 w-24 h-14"
+                              style={{ backgroundColor: bState.hex }}
+                            >
+                              <span
+                                className="text-xs font-mono leading-tight"
+                                style={{ color: light ? "#1e293b" : "#f8fafc" }}
+                              >
+                                {bState.hex}
+                              </span>
+                            </div>
                           );
                         })()}
                       </td>
@@ -498,6 +592,40 @@ export default function ColorPalettePage({
                   }
                   return (
                     <DominantStrip dominant_colors={vState.dominant_colors} />
+                  );
+                })()}
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  AWS Nova Lite
+                </p>
+                {(() => {
+                  const bState = bedrockPalettes[modal.base];
+                  if (!bState || bState === "loading") {
+                    return (
+                      <div className="w-24 h-14 rounded-lg bg-slate-200 animate-pulse" />
+                    );
+                  }
+                  if (bState === "error") {
+                    return (
+                      <p className="text-xs text-red-400">
+                        Failed to load palette
+                      </p>
+                    );
+                  }
+                  const light = isLight(bState.hex);
+                  return (
+                    <div
+                      className="rounded-lg flex flex-col items-center justify-center px-4 py-3 w-24 h-14"
+                      style={{ backgroundColor: bState.hex }}
+                    >
+                      <span
+                        className="text-xs font-mono leading-tight"
+                        style={{ color: light ? "#1e293b" : "#f8fafc" }}
+                      >
+                        {bState.hex}
+                      </span>
+                    </div>
                   );
                 })()}
               </div>

@@ -10,6 +10,7 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1015.0",
     "@neondatabase/serverless": "^1.0.2",
     "next": "16.1.7",
     "node-vibrant": "^4.0.4",

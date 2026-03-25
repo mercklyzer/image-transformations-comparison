@@ -39,8 +39,12 @@ async function isValidToken(token: string): Promise<boolean> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Let login page and auth API through
-  if (pathname.startsWith("/login") || pathname.startsWith("/api/auth")) {
+  // Let login page, auth API, and palette APIs through
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/palette")
+  ) {
     return NextResponse.next();
   }
 

@@ -5,6 +5,44 @@ const sql = neon(process.env.DATABASE_URL!);
 export type ReviewStatus = "accepted" | "rejected" | "ignore";
 export type Reviews = Record<string, ReviewStatus>;
 
+// --- Palette cache ---
+
+async function ensurePalettesTable(): Promise<void> {
+  await sql`
+    CREATE TABLE IF NOT EXISTS palettes (
+      filename TEXT NOT NULL,
+      tool     TEXT NOT NULL,
+      data     JSONB NOT NULL,
+      PRIMARY KEY (filename, tool)
+    )
+  `;
+}
+
+export async function getCachedPalette(
+  filename: string,
+  tool: string,
+): Promise<unknown | null> {
+  await ensurePalettesTable();
+  const rows =
+    await sql`SELECT data FROM palettes WHERE filename = ${filename} AND tool = ${tool}`;
+  return rows[0]?.data ?? null;
+}
+
+export async function setCachedPalette(
+  filename: string,
+  tool: string,
+  data: unknown,
+): Promise<void> {
+  await ensurePalettesTable();
+  await sql`
+    INSERT INTO palettes (filename, tool, data)
+    VALUES (${filename}, ${tool}, ${JSON.stringify(data)})
+    ON CONFLICT (filename, tool) DO UPDATE SET data = EXCLUDED.data
+  `;
+}
+
+// --- Reviews ---
+
 async function ensureTable(): Promise<void> {
   // Drop the old single-column schema if it exists (no `tool` column)
   await sql`
