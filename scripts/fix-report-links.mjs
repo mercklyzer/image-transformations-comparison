@@ -47,11 +47,16 @@ const analysisSectionImages = [
   "MIRAGE-902-7",
 ];
 
-const md = readFileSync(join(ROOT, "reports/color-palette-footwear.md"), "utf8");
+const md = readFileSync(
+  join(ROOT, "reports/color-palette-footwear.md"),
+  "utf8",
+);
 const lines = md.split("\n");
 
 // Find the line index where the per-image data table rows start
-const perImageHeaderIdx = lines.findIndex((l) => l.includes("## Per-Image Data"));
+const perImageHeaderIdx = lines.findIndex((l) =>
+  l.includes("## Per-Image Data"),
+);
 // Data rows start 3 lines after the header (blank, table header, separator)
 const perImageDataStart = perImageHeaderIdx + 4;
 
@@ -74,5 +79,13 @@ const fixed = lines.map((line, i) => {
   }
 });
 
-writeFileSync(join(ROOT, "reports/color-palette-footwear.md"), fixed.join("\n"), "utf8");
-console.log("Done. Fixed", lines.filter((l) => l.startsWith("| []()")).length, "rows.");
+writeFileSync(
+  join(ROOT, "reports/color-palette-footwear.md"),
+  fixed.join("\n"),
+  "utf8",
+);
+console.log(
+  "Done. Fixed",
+  lines.filter((l) => l.startsWith("| []()")).length,
+  "rows.",
+);

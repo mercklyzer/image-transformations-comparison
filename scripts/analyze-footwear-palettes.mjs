@@ -5,14 +5,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 const sql = neon(DATABASE_URL);
 
 const images = JSON.parse(
-  readFileSync("src/data/images-footwear.json", "utf8")
+  readFileSync("src/data/images-footwear.json", "utf8"),
 );
 const filenames = images.map((img) => img.base + ".jpg");
 
 console.log(`Total footwear images: ${filenames.length}`);
 
 // Fetch all palettes at once
-const rows = await sql`SELECT filename, tool, data FROM palettes WHERE filename = ANY(${filenames})`;
+const rows =
+  await sql`SELECT filename, tool, data FROM palettes WHERE filename = ANY(${filenames})`;
 
 // Organize by filename
 const byFile = {};
@@ -36,7 +37,7 @@ function colorDistance(hex1, hex2) {
   const c1 = hexToRgb(hex1);
   const c2 = hexToRgb(hex2);
   return Math.sqrt(
-    (c1.r - c2.r) ** 2 + (c1.g - c2.g) ** 2 + (c1.b - c2.b) ** 2
+    (c1.r - c2.r) ** 2 + (c1.g - c2.g) ** 2 + (c1.b - c2.b) ** 2,
   );
 }
 
@@ -46,9 +47,12 @@ function categorizeColor(hex) {
   const lum = 0.299 * r + 0.587 * g + 0.114 * b;
   if (lum < 30) return "Black/Very Dark";
   if (lum > 225) return "White/Very Light";
-  if (lum > 180 && Math.abs(r - g) < 30 && Math.abs(g - b) < 30) return "Light Gray";
-  if (lum < 80 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20) return "Dark Gray";
-  if (Math.abs(r - g) < 25 && Math.abs(g - b) < 25 && Math.abs(r - b) < 25) return "Gray/Neutral";
+  if (lum > 180 && Math.abs(r - g) < 30 && Math.abs(g - b) < 30)
+    return "Light Gray";
+  if (lum < 80 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20)
+    return "Dark Gray";
+  if (Math.abs(r - g) < 25 && Math.abs(g - b) < 25 && Math.abs(r - b) < 25)
+    return "Gray/Neutral";
 
   // Chromatic colors
   const max = Math.max(r, g, b);
@@ -70,8 +74,22 @@ function categorizeColor(hex) {
   return "Pink";
 }
 
-const imgixDominantKeys = ["vibrant", "vibrant_dark", "vibrant_light", "muted", "muted_dark", "muted_light"];
-const vibrantDominantKeys = ["vibrant", "vibrant_dark", "vibrant_light", "muted", "muted_dark", "muted_light"];
+const imgixDominantKeys = [
+  "vibrant",
+  "vibrant_dark",
+  "vibrant_light",
+  "muted",
+  "muted_dark",
+  "muted_light",
+];
+const vibrantDominantKeys = [
+  "vibrant",
+  "vibrant_dark",
+  "vibrant_light",
+  "muted",
+  "muted_dark",
+  "muted_light",
+];
 
 const results = [];
 let missingCount = 0;
@@ -119,7 +137,9 @@ console.log(`Missing data: ${missingCount}`);
 // We'll use our own judgment here - looking at the actual product images through the colors
 
 // For each image, compute distances from Nova to each imgix dominant and first color
-console.log("\n=== ANALYSIS: Distance from Nova Lite to each imgix category ===");
+console.log(
+  "\n=== ANALYSIS: Distance from Nova Lite to each imgix category ===",
+);
 
 const imgixCategoryDistances = {};
 for (const key of [...imgixDominantKeys, "first_color"]) {
@@ -162,7 +182,8 @@ for (const entry of results) {
   }
 
   if (bestImgixKey) {
-    imgixBestCategory[bestImgixKey] = (imgixBestCategory[bestImgixKey] || 0) + 1;
+    imgixBestCategory[bestImgixKey] =
+      (imgixBestCategory[bestImgixKey] || 0) + 1;
   }
 
   // Vibrant analysis
@@ -181,7 +202,8 @@ for (const entry of results) {
   }
 
   if (bestVibrantKey) {
-    vibrantBestCategory[bestVibrantKey] = (vibrantBestCategory[bestVibrantKey] || 0) + 1;
+    vibrantBestCategory[bestVibrantKey] =
+      (vibrantBestCategory[bestVibrantKey] || 0) + 1;
   }
 }
 
@@ -192,30 +214,49 @@ for (const key of [...imgixDominantKeys, "first_color"]) {
   if (dists.length > 0) {
     const avg = dists.reduce((a, b) => a + b, 0) / dists.length;
     const median = dists.sort((a, b) => a - b)[Math.floor(dists.length / 2)];
-    console.log(`  ${key}: avg=${avg.toFixed(1)}, median=${median.toFixed(1)}, n=${dists.length}`);
+    console.log(
+      `  ${key}: avg=${avg.toFixed(1)}, median=${median.toFixed(1)}, n=${dists.length}`,
+    );
   }
 }
 
 console.log("\n--- imgix: Which category is closest to Nova per image ---");
 const imgixTotal = Object.values(imgixBestCategory).reduce((a, b) => a + b, 0);
-for (const [key, count] of Object.entries(imgixBestCategory).sort((a, b) => b[1] - a[1])) {
-  console.log(`  ${key}: ${count} (${((count / imgixTotal) * 100).toFixed(1)}%)`);
+for (const [key, count] of Object.entries(imgixBestCategory).sort(
+  (a, b) => b[1] - a[1],
+)) {
+  console.log(
+    `  ${key}: ${count} (${((count / imgixTotal) * 100).toFixed(1)}%)`,
+  );
 }
 
-console.log("\n--- Node Vibrant: Average distance to Nova Lite per category ---");
+console.log(
+  "\n--- Node Vibrant: Average distance to Nova Lite per category ---",
+);
 for (const key of vibrantDominantKeys) {
   const dists = vibrantCategoryDistances[key];
   if (dists.length > 0) {
     const avg = dists.reduce((a, b) => a + b, 0) / dists.length;
     const median = dists.sort((a, b) => a - b)[Math.floor(dists.length / 2)];
-    console.log(`  ${key}: avg=${avg.toFixed(1)}, median=${median.toFixed(1)}, n=${dists.length}`);
+    console.log(
+      `  ${key}: avg=${avg.toFixed(1)}, median=${median.toFixed(1)}, n=${dists.length}`,
+    );
   }
 }
 
-console.log("\n--- Node Vibrant: Which category is closest to Nova per image ---");
-const vibrantTotal = Object.values(vibrantBestCategory).reduce((a, b) => a + b, 0);
-for (const [key, count] of Object.entries(vibrantBestCategory).sort((a, b) => b[1] - a[1])) {
-  console.log(`  ${key}: ${count} (${((count / vibrantTotal) * 100).toFixed(1)}%)`);
+console.log(
+  "\n--- Node Vibrant: Which category is closest to Nova per image ---",
+);
+const vibrantTotal = Object.values(vibrantBestCategory).reduce(
+  (a, b) => a + b,
+  0,
+);
+for (const [key, count] of Object.entries(vibrantBestCategory).sort(
+  (a, b) => b[1] - a[1],
+)) {
+  console.log(
+    `  ${key}: ${count} (${((count / vibrantTotal) * 100).toFixed(1)}%)`,
+  );
 }
 
 // ===== ANALYSIS 2: Agreement between imgix first color and Nova Lite =====
@@ -233,7 +274,13 @@ for (const entry of results) {
 }
 firstColorDists.sort((a, b) => a.dist - b.dist);
 
-const fcDistBuckets = { "0-30": 0, "31-60": 0, "61-100": 0, "101-150": 0, "151+": 0 };
+const fcDistBuckets = {
+  "0-30": 0,
+  "31-60": 0,
+  "61-100": 0,
+  "101-150": 0,
+  "151+": 0,
+};
 for (const d of firstColorDists) {
   if (d.dist <= 30) fcDistBuckets["0-30"]++;
   else if (d.dist <= 60) fcDistBuckets["31-60"]++;
@@ -243,14 +290,19 @@ for (const d of firstColorDists) {
 }
 console.log("Distance distribution (imgix first color vs Nova):");
 for (const [bucket, count] of Object.entries(fcDistBuckets)) {
-  console.log(`  ${bucket}: ${count} (${((count / firstColorDists.length) * 100).toFixed(1)}%)`);
+  console.log(
+    `  ${bucket}: ${count} (${((count / firstColorDists.length) * 100).toFixed(1)}%)`,
+  );
 }
-const avgFC = firstColorDists.reduce((a, b) => a + b.dist, 0) / firstColorDists.length;
+const avgFC =
+  firstColorDists.reduce((a, b) => a + b.dist, 0) / firstColorDists.length;
 const medianFC = firstColorDists[Math.floor(firstColorDists.length / 2)].dist;
 console.log(`  Average: ${avgFC.toFixed(1)}, Median: ${medianFC.toFixed(1)}`);
 
 // ===== ANALYSIS 3: Cases where imgix first color matches Nova but Vibrant doesn't =====
-console.log("\n=== Cases where imgix first color is MUCH closer to Nova than Vibrant ===");
+console.log(
+  "\n=== Cases where imgix first color is MUCH closer to Nova than Vibrant ===",
+);
 let fcBetterCount = 0;
 let fcWorseCount = 0;
 const interestingCases = [];
@@ -277,9 +329,11 @@ for (const entry of results) {
 console.log(`First color significantly closer: ${fcBetterCount}`);
 console.log(`Vibrant significantly closer: ${fcWorseCount}`);
 console.log("Most dramatic differences (first color >> vibrant):");
-interestingCases.sort((a, b) => (b.vibDist - b.fcDist) - (a.vibDist - a.fcDist));
+interestingCases.sort((a, b) => b.vibDist - b.fcDist - (a.vibDist - a.fcDist));
 for (const c of interestingCases.slice(0, 10)) {
-  console.log(`  ${c.filename}: first=${c.imgixFirst} (d=${c.fcDist}), vibrant=${c.imgixVibrant} (d=${c.vibDist}), nova=${c.nova}`);
+  console.log(
+    `  ${c.filename}: first=${c.imgixFirst} (d=${c.fcDist}), vibrant=${c.imgixVibrant} (d=${c.vibDist}), nova=${c.nova}`,
+  );
 }
 
 // ===== ANALYSIS 4: imgix vibrant vs Node vibrant agreement =====
@@ -287,10 +341,18 @@ console.log("\n=== imgix Vibrant vs Node Vibrant agreement ===");
 const ivDistances = [];
 for (const entry of results) {
   if (entry.imgixDominant.vibrant && entry.vibrantDominant.vibrant) {
-    ivDistances.push(colorDistance(entry.imgixDominant.vibrant, entry.vibrantDominant.vibrant));
+    ivDistances.push(
+      colorDistance(entry.imgixDominant.vibrant, entry.vibrantDominant.vibrant),
+    );
   }
 }
-const ivBuckets = { "0-30": 0, "31-60": 0, "61-100": 0, "101-150": 0, "151+": 0 };
+const ivBuckets = {
+  "0-30": 0,
+  "31-60": 0,
+  "61-100": 0,
+  "101-150": 0,
+  "151+": 0,
+};
 for (const d of ivDistances) {
   if (d <= 30) ivBuckets["0-30"]++;
   else if (d <= 60) ivBuckets["31-60"]++;
@@ -300,7 +362,9 @@ for (const d of ivDistances) {
 }
 console.log(`Compared: ${ivDistances.length} images`);
 for (const [bucket, count] of Object.entries(ivBuckets)) {
-  console.log(`  ${bucket}: ${count} (${((count / ivDistances.length) * 100).toFixed(1)}%)`);
+  console.log(
+    `  ${bucket}: ${count} (${((count / ivDistances.length) * 100).toFixed(1)}%)`,
+  );
 }
 const ivAvg = ivDistances.reduce((a, b) => a + b, 0) / ivDistances.length;
 console.log(`  Average: ${ivAvg.toFixed(1)}`);
@@ -333,15 +397,22 @@ for (const entry of results) {
   };
 
   // Distances to Nova
-  row.d_imgix_first = entry.imgixFirstColor ? colorDistance(entry.imgixFirstColor, entry.novaHex).toFixed(0) : null;
-  row.d_imgix_vibrant = entry.imgixDominant.vibrant ? colorDistance(entry.imgixDominant.vibrant, entry.novaHex).toFixed(0) : null;
-  row.d_nv_vibrant = entry.vibrantDominant.vibrant ? colorDistance(entry.vibrantDominant.vibrant, entry.novaHex).toFixed(0) : null;
+  row.d_imgix_first = entry.imgixFirstColor
+    ? colorDistance(entry.imgixFirstColor, entry.novaHex).toFixed(0)
+    : null;
+  row.d_imgix_vibrant = entry.imgixDominant.vibrant
+    ? colorDistance(entry.imgixDominant.vibrant, entry.novaHex).toFixed(0)
+    : null;
+  row.d_nv_vibrant = entry.vibrantDominant.vibrant
+    ? colorDistance(entry.vibrantDominant.vibrant, entry.novaHex).toFixed(0)
+    : null;
 
   // Best imgix option
   let bestDist = Infinity;
   let bestKey = null;
   for (const key of [...imgixDominantKeys, "first_color"]) {
-    const hex = key === "first_color" ? entry.imgixFirstColor : entry.imgixDominant[key];
+    const hex =
+      key === "first_color" ? entry.imgixFirstColor : entry.imgixDominant[key];
     if (hex) {
       const d = colorDistance(hex, entry.novaHex);
       if (d < bestDist) {
@@ -381,13 +452,19 @@ for (const entry of results) {
   const cat = categorizeColor(entry.novaHex);
   novaCategories[cat] = (novaCategories[cat] || 0) + 1;
 }
-for (const [cat, count] of Object.entries(novaCategories).sort((a, b) => b[1] - a[1])) {
-  console.log(`  ${cat}: ${count} (${((count / results.length) * 100).toFixed(1)}%)`);
+for (const [cat, count] of Object.entries(novaCategories).sort(
+  (a, b) => b[1] - a[1],
+)) {
+  console.log(
+    `  ${cat}: ${count} (${((count / results.length) * 100).toFixed(1)}%)`,
+  );
 }
 
 // ===== ANALYSIS 7: Cases where Nova seems wrong =====
 // Check for cases where Nova picks a very unusual color vs both imgix and NV
-console.log("\n=== Potential Nova Lite issues (disagreement with BOTH imgix and NV) ===");
+console.log(
+  "\n=== Potential Nova Lite issues (disagreement with BOTH imgix and NV) ===",
+);
 const novaIssues = [];
 for (const entry of results) {
   const imgVib = entry.imgixDominant.vibrant;
@@ -411,16 +488,22 @@ for (const entry of results) {
     });
   }
 }
-console.log(`Cases where imgix+NV agree but Nova disagrees: ${novaIssues.length}`);
-for (const c of novaIssues.sort((a, b) => Number(b.imgNovaDist) - Number(a.imgNovaDist)).slice(0, 20)) {
-  console.log(`  ${c.filename}: imgix=${c.imgixVibrant}, nv=${c.nvVibrant} (agree d=${c.imgNvDist}), nova=${c.nova} (d=${c.imgNovaDist}/${c.nvNovaDist})`);
+console.log(
+  `Cases where imgix+NV agree but Nova disagrees: ${novaIssues.length}`,
+);
+for (const c of novaIssues
+  .sort((a, b) => Number(b.imgNovaDist) - Number(a.imgNovaDist))
+  .slice(0, 20)) {
+  console.log(
+    `  ${c.filename}: imgix=${c.imgixVibrant}, nv=${c.nvVibrant} (agree d=${c.imgNvDist}), nova=${c.nova} (d=${c.imgNovaDist}/${c.nvNovaDist})`,
+  );
 }
 
 // ===== ANALYSIS 8: What if we always use imgix dark_muted for dark products? =====
 console.log("\n=== Strategy test: imgix muted_dark for dark Nova images ===");
-const darkNovaImages = results.filter(e => {
+const darkNovaImages = results.filter((e) => {
   const { r, g, b } = hexToRgb(e.novaHex);
-  return (0.299 * r + 0.587 * g + 0.114 * b) < 50;
+  return 0.299 * r + 0.587 * g + 0.114 * b < 50;
 });
 console.log(`Dark Nova images: ${darkNovaImages.length}`);
 
@@ -436,10 +519,17 @@ for (const entry of darkNovaImages) {
     if (d < 50) firstColorDarkMatch++;
   }
 }
-console.log(`  muted_dark within 50 of Nova: ${darkMutedMatch} (${((darkMutedMatch / darkNovaImages.length) * 100).toFixed(1)}%)`);
-console.log(`  first_color within 50 of Nova: ${firstColorDarkMatch} (${((firstColorDarkMatch / darkNovaImages.length) * 100).toFixed(1)}%)`);
+console.log(
+  `  muted_dark within 50 of Nova: ${darkMutedMatch} (${((darkMutedMatch / darkNovaImages.length) * 100).toFixed(1)}%)`,
+);
+console.log(
+  `  first_color within 50 of Nova: ${firstColorDarkMatch} (${((firstColorDarkMatch / darkNovaImages.length) * 100).toFixed(1)}%)`,
+);
 
 // Output full JSON for detailed inspection
 import { writeFileSync } from "fs";
-writeFileSync("scripts/footwear-palette-analysis.json", JSON.stringify(fullData, null, 2));
+writeFileSync(
+  "scripts/footwear-palette-analysis.json",
+  JSON.stringify(fullData, null, 2),
+);
 console.log("\nFull data written to scripts/footwear-palette-analysis.json");

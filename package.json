@@ -10,7 +10,9 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1015.0",
+    "@aws-sdk/client-rekognition": "^3.1029.0",
     "@neondatabase/serverless": "^1.0.2",
     "next": "16.1.7",
     "node-vibrant": "^4.0.4",
